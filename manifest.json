@@ -1,0 +1,9 @@
+{
+	"id": "pagurl",
+	"name": "Pagurl",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Turn a URL link into a page",
+	"author": "anotheropensourcefan",
+	"isDesktopOnly": false
+}

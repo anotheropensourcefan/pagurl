@@ -1,4 +1,4 @@
-// main.ts
+// this Obsidian plugin turns a URL link into a page
 import { Plugin, Editor, moment, Notice, PluginSettingTab, App, Setting } from "obsidian";
 
 interface URLToPageSettings {
@@ -27,6 +27,15 @@ export default class PagurlPlugin extends Plugin {
 		await this.loadSettings();
 
 		this.addCommands(this.settings.folders);
+
+		this.addCommand({
+			id: 'pagurl-current',
+			name: 'current',
+			editorCallback: async (editor: Editor) => {
+				await this.callback(editor, 'current');
+			}
+		});
+
 		this.addSettingTab(new SettingTab(this.app, this));
 	}
 	private command(name: string) {
@@ -40,8 +49,24 @@ export default class PagurlPlugin extends Plugin {
 	}
 	private async callback(editor: Editor, folder: string) {
 		try {
-			const link = this.extractMarkdownLink(editor);
-			if (!link) throw new Error("No valid Markdown link found");
+			if (folder === 'current') {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile) throw new Error("No active file to determine its folder.");
+				folder = activeFile?.parent?.path || folder;
+			}
+
+			let link = this.extractMarkdownLink(editor);
+			if (!link) {
+				const selectedText = editor.getSelection().trim();
+				if (!selectedText) {
+					throw new Error("Select a valid text or Markdown link");
+				}
+				link = {
+					fullMatch: selectedText,
+					alias: selectedText,
+					url: ""
+				};
+			}
 
 			const { newFileName, content } = await this.processLink(link);
 			await this.createNote(newFileName, content, folder);
@@ -103,7 +128,7 @@ export default class PagurlPlugin extends Plugin {
 
 	private generateFileName(link: ExtractedLink): string {
 		const sanitizedAlias = this.sanitizeFileName(link.alias);
-
+		if (!link.url) return sanitizedAlias;
 		switch (this.settings.fileNameStrategy) {
 			case "domain-date":
 				try {
@@ -123,7 +148,8 @@ export default class PagurlPlugin extends Plugin {
 	}
 
 	private generateNoteContent(link: ExtractedLink): string {
-		const frontmatter = `---\nurl: "${link.url}"\naliases:\n  - ${link.alias}\n---\n`;
+		const frontmatter = `---\n` + (link.url ? `url: "${link.url}"\n` : ``) + `aliases:\n  - ${link.alias}\n---\n`;
+		// const frontmatter = `---\nurl: "${link.url}"\naliases:\n  - ${link.alias}\n---\n`;
 		const content = this.settings.template
 			.replace(/{{alias}}/g, link.alias)
 			.replace(/{{url}}/g, link.url);

@@ -1,6 +1,6 @@
 {
 	"name": "pagurl",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"description": "Turn a URL link into a page",
 	"main": "main.js",
 	"scripts": {
